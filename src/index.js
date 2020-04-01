@@ -1,7 +1,7 @@
 const input = document.querySelector('input');
 const form = document.querySelector('form');
 const noteList = document.querySelector('ul');
-let value = '';
+let inptValue = '';
 
 function renderTask(taskObject) {
     // Создание елементов \\
@@ -36,8 +36,8 @@ function editTask(editTaskObject) {
     const taskItemEditSave = document.createElement('button');
     const taskItemEditCancel = document.createElement('button');
     taskItem.innerHTML = '<input type = text  class = text_edit>';
-    const textEdit = editTaskObject.children[0];
-    
+    // eslint-disable-next-line prefer-destructuring
+    const textEdit = editTaskObject.children[0]; // eslint-disable-line no-magic-numbers
     taskItem.classList.add('note-list__item');
     taskItemEditSave.classList.add('save');
     taskItemEditCancel.classList.add('cancel');
@@ -46,7 +46,7 @@ function editTask(editTaskObject) {
     taskItem.append(taskItemEditSave);
     taskItem.append(taskItemEditCancel);
     //\\
-    textEdit.value = value;
+    textEdit.value = inptValue;
     // Ф-кция удаления потомков при нажатии на Edit \\
     function delChild (child) {
         for (let i = 0; i < child.length; i++) {
@@ -74,7 +74,8 @@ form.addEventListener('submit', e => {
         const task = {
             value: input.value,
             completed: false,
-            id: String(new Date).slice(16,24).replace(/:/g,''),
+            isSaveOpen: false,
+            id: String(new Date).slice(16,24).replace(/:/g,''), // eslint-disable-line no-magic-numbers
         };
         // Добавили обьект(ы) в массив \\
         taskList.unshift(task);
@@ -83,67 +84,72 @@ form.addEventListener('submit', e => {
         input.value = '';
     }
 });
-
 // Событие клик на кнопки \\
 noteList.addEventListener('click', e => {
     const element = e.target;
     const targetClassName = e.target.className;
     let currentId;
-
+    const inpEdit = element.closest('.note-list__item').querySelector('input');
     switch (targetClassName) {
-        case 'remove':
-        case 'complete':
-        case 'edit':
-        case 'save':
+    case 'remove':
+    case 'complete':
+    case 'edit':
+    case 'save':
         currentId = element.closest('.note-list__item').getAttribute('data-id');
         break;
-        
-        
+
     }
-
     switch (targetClassName) {
-        case 'remove':
+    case 'remove':
+        noteList.innerHTML = '';
+        //Перезаписали масив = останутся те что не совпадают currentId \\
+        taskList = taskList.filter(task => task.id !== currentId);
+        // Добавили вызов ф-кции с обьектом заметки \\
+        taskList.forEach(task => {
+            noteList.append(renderTask(task));
+        });
+        break;
+    case 'complete':
+        // Если id совпадает то completed = true (выполнено) \\
+        taskList.find(task => task.id === currentId).completed = true;
+        noteList.innerHTML = '';
+        // Добавили вызов ф-кции с обьектом заметки \\
+        taskList.forEach(task => {
+            noteList.append(renderTask(task));
+        });
+        break;
+    case 'edit':
+        inptValue = taskList.find(task => task.id === currentId).value;
+        // Находим значение с с выбраного списка \\
+        taskList.find(task => {
+            if (task.id === currentId) {
+                task.isSaveOpen = true;
+            }if (task.isSaveOpen) {
+                const btns = noteList.querySelectorAll('button');
+                btns.forEach(btn => {
+                    btn.setAttribute('disabled', 'disabled');
+                });
+            }
+        });
+        // Передаём в ф-кцию именно этот список который редактируется \\
+        editTask(element.closest('.note-list__item'));
+        break;
+    case 'save':
+        // Находим именно тот инпут который хотим сохранить \\
+        taskList.forEach(task => {
             noteList.innerHTML = '';
-            //Перезаписали масив = останутся те что не совпадают currentId \\
-            taskList = taskList.filter(task => task.id !== currentId);
-            // Добавили вызов ф-кции с обьектом заметки \\
-            taskList.forEach(task => {
-                noteList.append(renderTask(task));
-            });
-            break;
-
-        case 'complete':
-            // Если id совпадает то completed = true (выполнено) \\
-            taskList.find(task => task.id === currentId).completed = true;
-            noteList.innerHTML = '';
-            // Добавили вызов ф-кции с обьектом заметки \\
-            taskList.forEach(task => {
-                noteList.append(renderTask(task));
-            });
-            break;
-
-        case 'edit':
-            // Находим значение с с выбраного списка \\
-            value = taskList.find(task => task.id === currentId).value;
-            // Передаём в ф-кцию именно этот список который редактируется \\
-            editTask(element.closest('.note-list__item')); 
-            break;
-
-        case 'save':
-            // Находим именно тот инпут который хотим сохранить \\
-            let inpEdit = element.closest('.note-list__item').querySelector('input');
-            taskList.forEach(task => {
-                noteList.innerHTML = '';
-                if (task.id === currentId) {
-                    task.value = inpEdit.value;
-                }
-                noteList.append(renderTask(task));
-            })
-        
-        case 'cancel':
-            noteList.innerHTML = '';
-            taskList.forEach(task => {
-                noteList.append(renderTask(task));
-            });
+            if (task.id === currentId) {
+                task.value = inpEdit.value;
+            }
+            noteList.append(renderTask(task));
+        });
+    // eslint-disable-next-line no-fallthrough
+    case 'cancel':
+        noteList.innerHTML = '';
+        taskList.forEach(task => {
+            task.isSaveOpen = false;
+            noteList.append(renderTask(task));
+        });
+        break;
     }
 });
